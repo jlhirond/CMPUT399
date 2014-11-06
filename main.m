@@ -1,91 +1,44 @@
-% EXERCISE2: learn your own model
+%Get histogram data for all images in images folder
+imdb = constructIMDB2('data/images', 145, 'image', 2048);
+%format the retrieved information for use by object categorization
+histograms=zeros(2048, 145);
+names = transpose(imdb.images.name);
+%go through all images to create the matching histogram
+for i=1:45
+    row = imdb.images.words{i};
+    [~, rowSize] = size(row);
+    for j=1:rowSize
+        histograms(row(j), i) = histograms(row(j), i) + 1;
+    end
+end
+save('data/testdata.mat', 'histograms', 'names');
 
-% add required search paths
-setup ;
+%Get histogram data for all images in training images folder
+imdb = constructIMDB2('data/myImages', 9, 'bear', 2048);
+%format the retrieved information for use by object categorization
+histograms=zeros(2048, 9);
+names = transpose(imdb.images.name);
+%go through all images to create the matching histogram
+for i=1:9
+    row = imdb.images.words{i};
+    [~, rowSize] = size(row);
+    for j=1:rowSize
+        histograms(row(j), i) = histograms(row(j), i) + 1;
+    end
+end
+save('data/testdata2.mat', 'histograms', 'names');
 
-% --------------------------------------------------------------------
-% Stage A: Data Preparation
-% --------------------------------------------------------------------
-
-encoding = 'bovw' ;
-%encoding = 'vlad' ;
-%encoding = 'fv' ;
-
-encoder = load(sprintf('data/encoder_%s.mat',encoding)) ;
-
-% Compute positive histograms from your own images
-pos.names = getImageSet('data/myImages') ;
-pos.histograms = encodeImage(encoder, pos.names, ['data/cache_' encoding]) ;
-
-% Add default background images
-neg = load(sprintf('data/background_bridge_%s.mat',encoding)) ;
-names = {pos.names{:}, neg.names{:}};
-histograms = [pos.histograms, neg.histograms] ;
-labels = [ones(1,numel(pos.names)), - ones(1,numel(neg.names))] ;
-clear pos neg ;
-
-% Load testing data
-pos = load(sprintf('data/bear_val_%s.mat',encoding)) ;
-%pos = load(sprintf('data/car_val_%s.mat',encoding)) ;
-neg = load(sprintf('data/background_val_%s.mat',encoding)) ;
-testNames = {pos.names{:}, neg.names{:}};
-testHistograms = [pos.histograms, neg.histograms] ;
-testLabels = [ones(1,numel(pos.names)), - ones(1,numel(neg.names))] ;
-clear pos neg ;
-
-% count how many images are there
-fprintf('Number of training images: %d positive, %d negative\n', ...
-        sum(labels > 0), sum(labels < 0)) ;
-fprintf('Number of testing images: %d positive, %d negative\n', ...
-        sum(testLabels > 0), sum(testLabels < 0)) ;
-
-% Hellinger's kernel
-histograms = sign(histograms).*sqrt(abs(histograms)) ;
-testHistograms = sign(testHistograms).*sqrt(abs(testHistograms)) ;
-
-% L2 normalize the histograms before running the linear SVM
-histograms = bsxfun(@times, histograms, 1./sqrt(sum(histograms.^2,1))) ;
-testHistograms = bsxfun(@times, testHistograms, 1./sqrt(sum(testHistograms.^2,1))) ;
-
-% --------------------------------------------------------------------
-% Stage B: Training a classifier
-% --------------------------------------------------------------------
-
-% Train the linear SVM
-C = 10 ;
-[w, bias] = trainLinearSVM(histograms, labels, C) ;
-
-% Evaluate the scores on the training data
-scores = w' * histograms + bias ;
-
-% Visualize the ranked list of images
-% figure(1) ; clf ; set(1,'name','Ranked training images (subset)') ;
-% displayRankedImageList(names, scores)  ;
-
-% Visualize the precision-recall curve
-% figure(2) ; clf ; set(2,'name','Precision-recall on train data') ;
-% vl_pr(labels, scores) ;
-
-% --------------------------------------------------------------------
-% Stage C: Classify the test images and assess the performance
-% --------------------------------------------------------------------
-
-% Test the linar SVM
-testScores = w' * testHistograms + bias ;
-
-% Visualize the ranked list of images
-figure(3) ; clf ; set(3,'name','Ranked test images (subset)') ;
-displayRankedImageList(testNames, testScores)  ;
-
-% Visualize the precision-recall curve
-figure(4) ; clf ; set(4,'name','Precision-recall on test data') ;
-vl_pr(testLabels, testScores) ;
-
-% Print results
-[drop,drop,info] = vl_pr(testLabels, testScores) ;
-fprintf('Test AP: %.2f\n', info.auc) ;
-
-[drop,perm] = sort(testScores,'descend') ;
-fprintf('Correctly retrieved in the top 36: %d\n', sum(testLabels(perm(1:36)) > 0)) ;
-
-
+%Get a few negative images (manually added and removed)
+imdb = constructIMDB2('data/myImages', 13, 'image', 2048);
+%format the retrieved information for use by object categorization
+histograms=zeros(2048, 13);
+names = transpose(imdb.images.name);
+%go through all images to create the matching histogram
+for i=1:13
+    row = imdb.images.words{i};
+    [~, rowSize] = size(row);
+    for j=1:rowSize
+        histograms(row(j), i) = histograms(row(j), i) + 1;
+    end
+end
+save('data/testdata3.mat', 'histograms', 'names');
