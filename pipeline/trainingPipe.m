@@ -60,6 +60,9 @@ end
 save(training_feat_file, 'x', 'y', 'ks', 'no_of_folds');
 toc
 
+% randomly rearrange images so that all the positive images are not contained within one fold
+% and/or choose smaller number of negative images
+
 % perform cross validation in order to find the optimal value for our
 % tuning parameter(s).
 disp('Performing cross validation...');
