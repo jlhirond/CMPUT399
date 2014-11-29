@@ -22,11 +22,11 @@ for k_id=1:numel(ks)
     k=ks(k_id);
     for i = 1:n
         fold_start_idx=(i-1)*fold_size + 1;
-       % if i ~= n
+        if i ~= n
             fold_end_idx=i*fold_size;
-        %else
-         %   fold_end_idx=size(x,1);
-        %end
+        else
+            fold_end_idx=size(x,2);
+        end
         % get validation data
         xi=x(:, fold_start_idx:fold_end_idx);
         yi=y(fold_start_idx:fold_end_idx);

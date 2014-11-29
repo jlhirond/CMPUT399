@@ -34,12 +34,11 @@ negNames2 = dir(negFilePattern2);
 negNames = [negNames2;negNames1];
 
 posSize = length(posNames);
-%negSize = length(negNames);
-negSize = 45;
+negSize = length(negNames);
 % The feature and response vectors, respectively.
 
 x = zeros(no_of_bins, posSize + negSize);
-y = [ones(posSize, 1);ones(negSize, 1)*-1];
+y = [ones(posSize, 1);zeros(negSize, 1)];
 names = cell(posSize + negSize,1);
 names(:) = {'test'};
 
@@ -56,8 +55,7 @@ for i = 1:length(negNames2)
     x(:,posSize + i) = bearFeature(img, 'hist');
     names(posSize + i,:) = {negNames(i).name};
 end
-%for i = 1:length(negNames1)
-for i = 1:45
+for i = 1:length(negNames1)
     img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
     x(:, posSize + length(negNames2) + i) = bearFeature(img, 'hist');
     names(posSize + length(negNames2) + i,:) = {negNames(length(negNames2)+i).name};
