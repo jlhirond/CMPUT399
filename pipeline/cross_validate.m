@@ -34,15 +34,15 @@ for k_id=1:numel(ks)
         other_folds_idx=[1:fold_start_idx-1 fold_end_idx+1:training_size];
         xi_=x(:, other_folds_idx);
         yi_=y(other_folds_idx);
-        
         % this can be svm, sift, etc.
         %yip = PredictBear(xi_, yi_, xi, k);
-        yip = PredictPeopleCount(xi_, yi_, xi, k, 'mean');
+        yip = PredictPeopleCount(xi_(2:end,:), yi_, xi(2:end,:), k, 'mean');
 
         ei=mean(abs(yi-yip));
         evall(i, k_id)=ei;
     end
     fprintf('\tDone with k=%d\n', k);
+    %fprintf('\n\tNumber of positive images: %d\n', positiveCount);
 end
 ev = mean(evall,1);
 end

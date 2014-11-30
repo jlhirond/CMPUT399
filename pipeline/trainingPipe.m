@@ -13,6 +13,7 @@ ks=min_k:max_k;
 
 % Mat files
 training_feat_file='training_features.mat';
+training_param='trained.mat'
 
 training_pos_file='01_pos.mat';
 training_neg_file='02_neg.mat';
@@ -39,8 +40,7 @@ negSize = length(negNames);
 
 x = zeros(no_of_bins, posSize + negSize);
 y = [ones(posSize, 1);zeros(negSize, 1)];
-names = cell(posSize + negSize,1);
-names(:) = {'test'};
+indices = (1:posSize + negSize)';
 
 % read all the images
 tic
@@ -48,36 +48,34 @@ tic
 for i = 1:posSize
     img = imread(strcat(pos_dir_name, '/', posNames(i).name));
      x(:,i) = bearFeature(img, 'hist');
-     names(i,:) = {posNames(i).name};
 end
 for i = 1:length(negNames2)
     img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
     x(:,posSize + i) = bearFeature(img, 'hist');
-    names(posSize + i,:) = {negNames(i).name};
 end
 for i = 1:length(negNames1)
     img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
     x(:, posSize + length(negNames2) + i) = bearFeature(img, 'hist');
-    names(posSize + length(negNames2) + i,:) = {negNames(length(negNames2)+i).name};
 end
 
 % randomly rearrange images so that all the positive images are not contained within one fold
-% and/or choose smaller number of negative images
-% rearranging a matrix: shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
-
-orderedArray = horzcat(x', y);
+orderedArray = horzcat(indices,x', y);
 shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
-X = shuffledArray(:,1:end-1)';
+X = shuffledArray(:,1:end-1)'; %(:,2:end-1)'
 Y = shuffledArray(:,end);
 
 % save everything in a .mat file for ease of use, testing, etc.
-save(training_feat_file, 'X', 'Y', 'ks', 'no_of_folds');
+save(training_feat_file, 'shuffledArray','X', 'Y', 'ks', 'no_of_folds');
 toc
 
 % perform cross validation in order to find the optimal value for our
 % tuning parameter(s).
 disp('Performing cross validation...');
 tic
-cross_validation_parameter = cross_validate(X, Y, ks, no_of_folds);
-fprintf('Optimal k=%d\n', cross_validation_parameter);
+ev = cross_validate(X, Y, ks, no_of_folds);
 toc
+
+[minev, minind] = min(ev);
+cross_validation_parameter = ks(minind(1));
+fprintf('Optimal k=%d\n', cross_validation_parameter);
+save(training_param, 'cross_validation_parameter');
