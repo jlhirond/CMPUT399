@@ -4,18 +4,22 @@ run(strcat(vlfeat_dir, '/toolbox/vl_setup'));
 clear all;
 
 SVM = 1;
+DeCAF = 0;
 
 % Tuning parameters
 min_k=1;
 max_k=10;
 no_of_bins=32;
+if (DeCAF == 1)
+    no_of_bins = 4096;
+end
 no_of_folds=10;
 combine_method='mean';
 ks=min_k:max_k;
 
 % Mat files
 training_feat_file='training_features.mat';
-training_param='trained.mat'
+training_param='trained.mat';
 
 training_pos_file='01_pos.mat';
 training_neg_file='02_neg.mat';
@@ -51,20 +55,47 @@ decaf_fv = transpose(decaf_fv);
 % read all the images
 tic
 % bearFeature can be replaced with whatever feature we need to extract.
-for i = 1:posSize
-    img = imread(strcat(pos_dir_name, '/', posNames(i).name));
-    x(:,i) = bearFeature(img, 'hist');
-    Xpos(:,i) = decaf_fv(:,i);
+if (DeCAF == 0)
+    for i = 1:posSize
+        img = imread(strcat(pos_dir_name, '/', posNames(i).name));
+        x(:,i) = bearFeature(img, 'hist');
+        Xpos(:,i) = decaf_fv(:,i);
+    end
 end
 
 if (SVM == 0)
-    for i = 1:length(negNames2)
-        img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
-        x(:,posSize + i) = bearFeature(img, 'hist');
-    end
-    for i = 1:length(negNames1)
-        img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
-        x(:, posSize + length(negNames2) + i) = bearFeature(img, 'hist');
+    %knn with histogram bear features
+    if (DeCAF == 0)
+        for i = 1:length(negNames2)
+            img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
+            x(:,posSize + i) = bearFeature(img, 'hist');
+        end
+        for i = 1:length(negNames1)
+            img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
+            x(:, posSize + length(negNames2) + i) = bearFeature(img, 'hist');
+        end
+    %knn with decaf features
+    else
+        % load positive decaf features
+        load(training_pos_file);
+        decaf_fv = transpose(decaf_fv);
+        % read all the images
+        tic
+        for i = 1:posSize
+             x(:,i) = decaf_fv(:, i);
+             names(i,:) = {posNames(i).name};
+        end
+        load(training_neg_file);
+        decaf_fv = transpose(decaf_fv);
+        for i = 1:length(negNames1)
+            x(:,posSize + i) = decaf_fv(:, i);
+            names(posSize + i,:) = {negNames(i).name};
+        end
+        for i = 1:length(negNames2)
+            x(:, posSize + length(negNames1) + i) = decaf_fv(:, length(negNames1) + i);
+            names(posSize + length(negNames1) + i,:) = {negNames(length(negNames1)+i).name};
+        end
+
     end
     % randomly rearrange images so that all the positive images are not contained within one fold
     orderedArray = horzcat(indices,x', y);
@@ -142,4 +173,3 @@ else
     end
     fprintf(' -> Best accuracy by DeCaf %1.3f for C=%1.5f\n',accbest,Cbest);
 end
-
