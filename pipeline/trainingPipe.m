@@ -121,3 +121,37 @@ tic
         Bbest = mParamB(maxind(1),:);
         save(training_param, 'Wbest', 'Bbest');
     end
+<<<<<<< HEAD
+=======
+    fprintf(' -> Best accuracy by DeCaf %1.3f for C=%1.5f\n',accbest,Cbest);
+end
+
+% Extract localization features
+fprintf('\nExtracting localization features from cropped images...\n');
+posFilePattern = fullfile(pos_dir_name, 'cropped*.jpg');
+croppedNames = dir(posFilePattern);
+croppedCount = length(croppedNames);
+cropped = cell(1, croppedCount);
+croppedFeatures = cell(1, croppedCount);
+% Load all of the images
+for i=1:croppedCount;
+    % read in the image
+    im = imread(strcat(pos_dir_name, '/', croppedNames(i).name));
+    % convert to grayscale
+    im = rgb2gray(im);
+    % resize to 24x24
+    im = imresize(im, [24, 24]);
+    % convert to single
+    im = single(im);
+    % add to cropped cell array
+    cropped{i} = im;
+end
+% Create an array of images
+for i=1:croppedCount
+    % compute vl_hog features for each image and place in feature matrix
+    croppedFeatures{i} = vl_hog(cropped{i}, 8);
+end
+% save the results
+save('localization_features.mat', 'croppedFeatures');
+fprintf('Done.\n');
+>>>>>>> 8dba862037a07ee528a3002747ca6469b42c0ddd
