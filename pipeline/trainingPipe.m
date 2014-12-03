@@ -121,10 +121,6 @@ tic
         Bbest = mParamB(maxind(1),:);
         save(training_param, 'Wbest', 'Bbest');
     end
-<<<<<<< HEAD
-=======
-    fprintf(' -> Best accuracy by DeCaf %1.3f for C=%1.5f\n',accbest,Cbest);
-end
 
 % Extract localization features
 fprintf('\nExtracting localization features from cropped images...\n');
@@ -154,4 +150,3 @@ end
 % save the results
 save('localization_features.mat', 'croppedFeatures');
 fprintf('Done.\n');
->>>>>>> 8dba862037a07ee528a3002747ca6469b42c0ddd
