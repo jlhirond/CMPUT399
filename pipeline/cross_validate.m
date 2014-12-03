@@ -1,5 +1,4 @@
-function ev = cross_validate(x,y,ks,n)
-
+function [ev, mParamW, mParamB] = cross_validate(x,y,ks,n,SVM)
 training_feat_file='training_features.mat';
 training_features=load(training_feat_file);
 if nargin<4
@@ -9,16 +8,23 @@ if nargin<3
     ks=training_features.ks;
 end
 if nargin<2
-    y=training_features.y;
+    y=training_features.Y;
 end
 if nargin<1
-    x=training_features.x;
+    x=training_features.X;
 end     
 
 training_size=size(x, 2);
 fold_size=ceil(training_size/n);
 evall=zeros(n, numel(ks));
-for k_id=1:numel(ks)
+%for SVM
+Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
+if SVM == 0
+    loops = nume1(ks);
+else
+    loops = 9; % yup
+end
+for k_id=1:loops
     k=ks(k_id);
     for i = 1:n
         fold_start_idx=(i-1)*fold_size + 1;
@@ -36,12 +42,22 @@ for k_id=1:numel(ks)
         yi_=y(other_folds_idx);
         % this can be svm, sift, etc.
         %yip = PredictBear(xi_, yi_, xi, k);
-        yip = PredictPeopleCount(xi_(2:end,:), yi_, xi(2:end,:), k, 'mean');
-
-        ei=mean(abs(yi-yip));
-        evall(i, k_id)=ei;
+        if SVM == 0
+            yip = PredictPeopleCount(xi_(2:end,:), yi_, xi(2:end,:), k, 'mean');
+            ei=mean(abs(yi-yip));
+            evall(i, k_id)=ei;
+        else
+            %do SVM
+            C = Call(k_id);
+            [w, b, accval] = BestWithSVM(xi_(2:end,:), yi_, xi(2:end,:), yi, C);
+            evall(i, k_id) = accval;
+            paramW(i,:) = w;
+            paramB(i,:) = b;
+        end
     end
     fprintf('\tDone with k=%d\n', k);
+    mParamW(k_id,:) = mean(paramW,1);
+    mParamB(k_id,:) = mean(paramB,1);
     %fprintf('\n\tNumber of positive images: %d\n', positiveCount);
 end
 ev = mean(evall,1);
