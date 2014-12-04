@@ -124,15 +124,30 @@ tic
 
 % Extract localization features
 fprintf('\nExtracting localization features from cropped images...\n');
-posFilePattern = fullfile(pos_dir_name, 'cropped*.jpg');
-croppedNames = dir(posFilePattern);
+posFilePattern3 = fullfile(pos_dir_name, 'cropped*.jpg');
+croppedNames = dir(posFilePattern3);
 croppedCount = length(croppedNames);
 cropped = cell(1, croppedCount);
 croppedFeatures = cell(1, croppedCount);
+croppedDimensions = zeros(croppedCount, 4);
 % Load all of the images
 for i=1:croppedCount;
+    % get the image name
+    cropName = char(croppedNames(i).name);
+    % split on the . to get rid of the end
+    cropName = strsplit(cropName, '.');
+    % split on all of the _
+    cropName = strsplit(cropName{1}, '_');
     % read in the image
-    im = imread(strcat(pos_dir_name, '/', croppedNames(i).name));
+    im = imread(strcat(pos_dir_name, '/', posNames(i).name));
+    % get the larger of the height and width variable
+    cropSize = max(str2num(cropName{5}), str2num(cropName{6}));
+    % crop the image based on the extracted file location
+    im = imcrop(im,[str2num(cropName{3}), str2num(cropName{4}), cropSize, cropSize]);
+    % save all location values for later use
+    for j=1:4;
+        croppedDimensions(i, j) = str2num(cropName{j+2});
+    end
     % convert to grayscale
     im = rgb2gray(im);
     % resize to 24x24
