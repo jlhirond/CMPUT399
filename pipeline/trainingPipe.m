@@ -1,17 +1,22 @@
+function trainingPipe(classifier, feature)
 vlfeat_dir='vlfeat-0.9.19';
 run(strcat(vlfeat_dir, '/toolbox/vl_setup'));
-clear all;
 
-SVM = 1;
-DeCAF = 1;
+if nargin < 2
+    feature = 'DeCAF';
+end
+if nargin < 1
+    classifier = 'SVM';
+end
 
 % Tuning parameters
 min_k=1;
 max_k=10;
 no_of_bins=32;
-if (DeCAF == 1)
-    no_of_bins = 4096;
+if (strcmp(feature,'DeCAF'))
+no_of_bins = 4096;
 end
+
 no_of_folds=10;
 combine_method='mean';
 ks=min_k:max_k;
@@ -20,16 +25,13 @@ Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
 % Mat files
 training_feat_file='training_features.mat';
 training_param='trained.mat';
-
 training_pos_file='01_pos.mat';
 training_neg_file='02_neg.mat';
 
 % Load the images
-disp('Loading names and counts of training images...');
 pos_dir_name = 'PositiveImages';
 neg_dir_name1 = 'NegativeImages1';
 neg_dir_name2 = 'NegativeImages2';
-
 posFilePattern = fullfile(pos_dir_name, 'bear*.jpg');
 negFilePattern1 = fullfile(neg_dir_name1, 'morantBridgeSite*.jpg');
 negFilePattern2 = fullfile(neg_dir_name2, 'morantBridgeSite*.jpg');
@@ -39,11 +41,10 @@ posNames = dir(posFilePattern);
 negNames1 = dir(negFilePattern1);
 negNames2 = dir(negFilePattern2);
 negNames = [negNames2;negNames1];
-
 posSize = length(posNames);
 negSize = length(negNames);
-% The feature and response vectors, respectively.
 
+% The feature and response vectors, respectively.
 x = zeros(no_of_bins, posSize + negSize);
 y = [ones(posSize, 1);-ones(negSize, 1)];
 indices = (1:posSize + negSize)';
@@ -52,86 +53,22 @@ indices = (1:posSize + negSize)';
 load(training_pos_file);
 decaf_fv = transpose(decaf_fv);
 
-% read all the images
-tic
-% bearFeature can be replaced with whatever feature we need to extract.
-
-    %knn with histogram bear features
-    if (DeCAF == 0)
-        for i = 1:posSize
-            img = imread(strcat(pos_dir_name, '/', posNames(i).name));
-            x(:,i) = bearFeature(img, 'hist');
-        end
-        for i = 1:length(negNames2)
-            img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
-            x(:,posSize + i) = bearFeature(img, 'hist');
-        end
-        for i = 1:length(negNames1)
-            img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
-            x(:, posSize + length(negNames2) + i) = bearFeature(img, 'hist');
-        end
-    %knn with decaf features
-    else
-        % load positive decaf features
-        load(training_pos_file);
-        decaf_fv = transpose(decaf_fv);
-        % read all the images
-        tic
-        for i = 1:posSize
-             x(:,i) = decaf_fv(:, i);
-             names(i,:) = {posNames(i).name};
-        end
-        load(training_neg_file);
-        decaf_fv = transpose(decaf_fv);
-        for i = 1:length(negNames1)
-            x(:,posSize + i) = decaf_fv(:, i);
-            names(posSize + i,:) = {negNames(i).name};
-        end
-        for i = 1:length(negNames2)
-            x(:, posSize + length(negNames1) + i) = decaf_fv(:, length(negNames1) + i);
-            names(posSize + length(negNames1) + i,:) = {negNames(length(negNames1)+i).name};
-        end
-    end
-    % randomly rearrange images so that all the positive images are not contained within one fold
-    orderedArray = horzcat(indices,x', y);
-    shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
-    X = shuffledArray(:,1:end-1)'; %(:,2:end-1)'
-    Y = shuffledArray(:,end);
-    
-    % save everything in a .mat file for ease of use, testing, etc.
-    save(training_feat_file, 'shuffledArray','X', 'Y', 'ks', 'no_of_folds');
-    toc
-    
-    % perform cross validation in order to find the optimal value for our
-    % tuning parameter(s).
-    disp('Performing cross validation...');
-    tic
-    [ev, mParamW, mParamB] = cross_validate(X, Y, ks, no_of_folds, SVM);
-    toc
-    if (SVM == 0)
-        [minev, minind] = min(ev);
-        cross_validation_parameter = ks(minind(1));
-        fprintf('Optimal k=%d\n', cross_validation_parameter);
-        save(training_param, 'cross_validation_parameter');
-    else
-        [maxev, maxind] = max(ev);
-        cross_validation_parameter = Call(maxind(1));
-        fprintf('Optimal C=%d\n', cross_validation_parameter);
-        Wbest = mParamW(maxind(1),:);
-        Bbest = mParamB(maxind(1),:);
-        save(training_param, 'Wbest', 'Bbest');
-    end
-
+% local features
 % Extract localization features
+tic
 fprintf('\nExtracting localization features from cropped images...\n');
 posFilePattern3 = fullfile(pos_dir_name, 'cropped*.jpg');
 croppedNames = dir(posFilePattern3);
-croppedCount = length(croppedNames);
-cropped = cell(1, croppedCount);
-croppedFeatures = cell(1, croppedCount);
-croppedDimensions = zeros(croppedCount, 4);
+croppedPosCount = length(croppedNames);
+cropped = cell(1, croppedPosCount);
+croppedPosFeatures = cell(1, croppedPosCount);
+croppedDimensions = zeros(croppedPosCount, 4);
 % Load all of the images
-for i=1:croppedCount;
+h = waitbar(0,'Extracting localization features from positive images...');
+hw=findobj(h,'Type','Patch');
+set(hw,'EdgeColor',[0 0.75 0.30],'FaceColor',[0 0.75 0.30])
+for i=1:croppedPosCount;
+    
     % get the image name
     cropName = char(croppedNames(i).name);
     % split on the . to get rid of the end
@@ -153,15 +90,139 @@ for i=1:croppedCount;
     % resize to 24x24
     im = imresize(im, [24, 24]);
     % convert to single
-    im = single(im);
+    im = im2single(im);
     % add to cropped cell array
     cropped{i} = im;
+    waitbar(i/croppedPosCount);
 end
+delete(h);
+% get cropped neg images
+croppedNegatives = cell(576, negSize);
+h = waitbar(0,'Extracting localization features from negative images...');
+for i=1:negSize
+    rand_loc = randperm(croppedPosCount,1);
+    dimensions = croppedDimensions(rand_loc,3);
+    Xcorner = croppedDimensions(rand_loc,1);
+    Ycorner= croppedDimensions(rand_loc,2);
+    
+    % Read from the correct folder
+    if i > length(negNames2)
+        dir_name = 'NegativeImages1';
+    else
+        dir_name = 'NegativeImages2';
+    end
+    
+    imNeg = imread(strcat(dir_name, '/', negNames(i).name));
+    croppedNeg = imNeg(Xcorner:Xcorner+dimensions, Ycorner:Ycorner+dimensions);
+    % convert to grayscale
+    %croppedNeg = rgb2gray(croppedNeg);
+    % resize to 24x24
+    croppedNeg = imresize(croppedNeg, [24, 24]);
+    % convert to single
+    croppedNeg = im2single(croppedNeg);
+    % add to cropped cell array   
+    croppedNegatives{i} = croppedNeg;
+    waitbar(i/negSize);
+end
+delete(h);
 % Create an array of images
-for i=1:croppedCount
-    % compute vl_hog features for each image and place in feature matrix
-    croppedFeatures{i} = vl_hog(cropped{i}, 8);
+for i=1:croppedPosCount
+    % compute vl_hog features for each positive image and place in feature matrix
+    feat = vl_hog(cropped{i}, 24);
+    PosFeat{i} = feat(:);
 end
+for k=1:negSize
+    % compute vl_hog features for each negative image and place in feature matrix
+    feat = vl_hog(croppedNegatives{k}, 24);
+    NegFeat{k} = feat(:);
+end
+croppedPosFeatures = (cell2mat(PosFeat));
+croppedNegFeatures = (cell2mat(NegFeat));
+
+croppedPosFeatures = croppedPosFeatures';
+croppedNegFeatures = croppedNegFeatures';
+
 % save the results
-save('localization_features.mat', 'croppedFeatures');
+save('localization_features.mat', 'croppedPosFeatures', 'croppedNegFeatures');
+toc
+% read all the images
+disp('Loading names and counts of training images...');
+h=waitbar(0,'Reading images');
+tic
+% bearFeature can be replaced with whatever feature we need to extract.
+
+	%knn with histogram bear features
+	if (strcmp(feature, 'hist'))
+		for i = 1:posSize
+			img = imread(strcat(pos_dir_name, '/', posNames(i).name));
+			x(:,i) = bearFeature(img);
+            waitbar(i/(posSize+negSize));
+		end
+		for i = 1:length(negNames2)
+			img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
+			x(:,posSize + i) = bearFeature(img);
+            waitbar((posSize+i)/(posSize+negSize));
+		end
+		for i = 1:length(negNames1)
+			img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
+			x(:, posSize + length(negNames2) + i) = bearFeature(img);
+            waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
+		end
+	%knn with decaf features
+	else
+		% load positive decaf features
+		load(training_pos_file);
+		decaf_fv = transpose(decaf_fv);
+		% read all the images
+		tic
+		for i = 1:posSize
+			x(:,i) = decaf_fv(:, i);
+			names(i,:) = {posNames(i).name};
+            waitbar(i/(posSize+negSize));
+		end
+		load(training_neg_file);
+		decaf_fv = transpose(decaf_fv);
+		for i = 1:length(negNames1)
+			x(:,posSize + i) = decaf_fv(:, i);
+			names(posSize + i,:) = {negNames(i).name};
+            waitbar((posSize+i)/(posSize+negSize));
+		end
+		for i = 1:length(negNames2)
+			x(:, posSize + length(negNames1) + i) = decaf_fv(:, length(negNames1) + i);
+			names(posSize + length(negNames1) + i,:) = {negNames(length(negNames1)+i).name};
+            waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
+		end
+    end
+    delete(h);
+% randomly rearrange images so that all the positive images are not contained within one fold
+orderedArray = horzcat(indices,x', y);
+shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
+X = shuffledArray(:,1:end-1)'; %(:,2:end-1)'
+Y = shuffledArray(:,end);
+
+% save everything in a .mat file for ease of use, testing, etc.
+save(training_feat_file, 'shuffledArray','X', 'Y', 'ks', 'no_of_folds');
+toc
+
+% perform cross validation in order to find the optimal value for our
+% tuning parameter(s).
+disp('Performing cross validation...');
+tic
+[ev, param] = cross_validate(X, Y, ks, no_of_folds, classifier);
+toc
+if (strcmp(classifier,'KNN'))
+	[minev, minind] = min(ev);
+	cross_validation_parameter = ks(minind(1));
+	fprintf('Optimal k=%d\n', cross_validation_parameter);
+    k = cross_validation_parameter;
+	save(training_param, 'k');
+else
+	[maxev, maxind] = max(ev);
+	cross_validation_parameter = Call(maxind(1));
+	fprintf('Optimal C=%d\n', cross_validation_parameter);
+	Wbest =param(maxind(1),:).W;
+	Bbest = param(maxind(1),:).B;
+	save(training_param, 'Wbest', 'Bbest');
+end
 fprintf('Done.\n');
+end
