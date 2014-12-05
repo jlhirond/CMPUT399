@@ -34,8 +34,9 @@ end
 if strcmp(classifier, 'SVM')
     BearScore = zeros(num_images,1);
     for i=1:num_images
-    BearScore(i)= dot(Wbest,features(i,:)) + Bbest
+    BearScore(i)= dot(Wbest,features(i,:)) + Bbest;
     end
+    save('bearnecessities.mat','BearScore');
 end
 
 %ADD STUFF FOR IF WE DON'T DO SVM
