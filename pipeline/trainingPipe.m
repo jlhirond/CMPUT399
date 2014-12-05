@@ -2,6 +2,8 @@ function trainingPipe(classifier, feature)
 vlfeat_dir='vlfeat-0.9.19';
 run(strcat(vlfeat_dir, '/toolbox/vl_setup'));
 addpath(genpath('cvml2013-practical-face-detection'));
+h=waitbar(0,'Extracting localization features from positive images...');
+waitObject = onCleanup(@() delete(h));
 
 if nargin < 2
     feature = 'DeCAF';
@@ -15,7 +17,7 @@ min_k=1;
 max_k=10;
 no_of_bins=32;
 if (strcmp(feature,'DeCAF'))
-no_of_bins = 4096;
+    no_of_bins = 4096;
 end
 
 no_of_folds=10;
@@ -65,9 +67,6 @@ cropped = cell(1, croppedPosCount);
 croppedPosFeatures = cell(1, croppedPosCount);
 croppedDimensions = zeros(croppedPosCount, 4);
 % Load all of the images
-h = waitbar(0,'Extracting localization features from positive images...');
-hw=findobj(h,'Type','Patch');
-set(hw,'EdgeColor',[0 0.75 0.30],'FaceColor',[0 0.75 0.30])
 for i=1:croppedPosCount;
     
     % get the image name
@@ -96,10 +95,11 @@ for i=1:croppedPosCount;
     cropped{i} = im;
     waitbar(i/croppedPosCount);
 end
-delete(h);
+
 % get cropped neg images
 croppedNegatives = cell(576, negSize);
-h = waitbar(0,'Extracting localization features from negative images...');
+
+waitbar(0,h,'Extracting localization features from negative images...');
 for i=1:negSize
     rand_loc = randperm(croppedPosCount,1);
     dimensions = croppedDimensions(rand_loc,3);
@@ -121,11 +121,11 @@ for i=1:negSize
     croppedNeg = imresize(croppedNeg, [24, 24]);
     % convert to single
     croppedNeg = im2single(croppedNeg);
-    % add to cropped cell array   
+    % add to cropped cell array
     croppedNegatives{i} = croppedNeg;
     waitbar(i/negSize);
 end
-delete(h);
+
 % Create an array of images
 for i=1:croppedPosCount
     % compute vl_hog features for each positive image and place in feature matrix
@@ -148,63 +148,63 @@ save('localization_features.mat', 'croppedPosFeatures', 'croppedNegFeatures');
 toc
 % read all the images
 disp('Loading names and counts of training images...');
-h=waitbar(0,'Reading images');
+waitbar(0,h,'Reading images...');
 tic
 % bearFeature can be replaced with whatever feature we need to extract.
 
-	%knn with histogram bear features
-	if (strcmp(feature, 'hist'))
-		for i = 1:posSize
-			img = imread(strcat(pos_dir_name, '/', posNames(i).name));
-			x(:,i) = bearFeature(img);
-            waitbar(i/(posSize+negSize));
-		end
-		for i = 1:length(negNames2)
-			img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
-			x(:,posSize + i) = bearFeature(img);
-            waitbar((posSize+i)/(posSize+negSize));
-		end
-		for i = 1:length(negNames1)
-			img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
-			x(:, posSize + length(negNames2) + i) = bearFeature(img);
-            waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
-		end
-	%with decaf features
-	else
-		% load positive decaf features
-		load(training_pos_file);
-        testCaf(1,:) = decaf_fv(18,:);
-        testCaf(2,:) = decaf_fv(43,:);
-        %decaf_fv = removerows(decaf_fv,'ind',[18 43]); %******************************************************
-		decaf_fv = transpose(decaf_fv);
-		% read all the images
-		tic
-		for i = 1:posSize
-			x(:,i) = decaf_fv(:, i);
-			names(i,:) = {posNames(i).name};
-            waitbar(i/(posSize+negSize));
-		end
-		load(training_neg_file);
-        testCaf(3,:) = decaf_fv(19,:);
-        testCaf(4,:) = decaf_fv(1093,:);
-        testCaf(5,:) = decaf_fv(1238,:);
-        testCaf(6,:) = decaf_fv(1958,:);
-        %decaf_fv = removerows(decaf_fv,'ind',[19 1093 1238 1958]); %**********************************************
-		decaf_fv = transpose(decaf_fv);
-		for i = 1:length(negNames1)
-			x(:,posSize + i) = decaf_fv(:, i);
-			names(posSize + i,:) = {negNames(i).name};
-            waitbar((posSize+i)/(posSize+negSize));
-		end
-		for i = 1:length(negNames2)
-			x(:, posSize + length(negNames1) + i) = decaf_fv(:, length(negNames1) + i);
-			names(posSize + length(negNames1) + i,:) = {negNames(length(negNames1)+i).name};
-            waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
-        end
-        decaf_fv = testCaf;
-        save('test.mat','decaf_fv');
+%knn with histogram bear features
+if (strcmp(feature, 'hist'))
+    for i = 1:posSize
+        img = imread(strcat(pos_dir_name, '/', posNames(i).name));
+        x(:,i) = bearFeature(img);
+        waitbar(i/(posSize+negSize));
     end
-    delete(h);
+    for i = 1:length(negNames2)
+        img = imread(strcat(neg_dir_name2, '/', negNames(i).name));
+        x(:,posSize + i) = bearFeature(img);
+        waitbar((posSize+i)/(posSize+negSize));
+    end
+    for i = 1:length(negNames1)
+        img = imread(strcat(neg_dir_name1, '/', negNames(length(negNames2)+i).name));
+        x(:, posSize + length(negNames2) + i) = bearFeature(img);
+        waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
+    end
+    %with decaf features
+else
+    % load positive decaf features
+    load(training_pos_file);
+    testCaf(1,:) = decaf_fv(18,:);
+    testCaf(2,:) = decaf_fv(43,:);
+    decaf_fv = removerows(decaf_fv,'ind',[18 43]); %******************************************************
+    decaf_fv = transpose(decaf_fv);
+    % read all the images
+    tic
+    for i = 1:posSize
+        x(:,i) = decaf_fv(:, i);
+        names(i,:) = {posNames(i).name};
+        waitbar(i/(posSize+negSize));
+    end
+    load(training_neg_file);
+    testCaf(3,:) = decaf_fv(19,:);
+    testCaf(4,:) = decaf_fv(1093,:);
+    testCaf(5,:) = decaf_fv(1238,:);
+    testCaf(6,:) = decaf_fv(1958,:);
+    decaf_fv = removerows(decaf_fv,'ind',[19 1093 1238 1958]); %**********************************************
+    decaf_fv = transpose(decaf_fv);
+    for i = 1:length(negNames1)
+        x(:,posSize + i) = decaf_fv(:, i);
+        names(posSize + i,:) = {negNames(i).name};
+        waitbar((posSize+i)/(posSize+negSize));
+    end
+    for i = 1:length(negNames2)
+        x(:, posSize + length(negNames1) + i) = decaf_fv(:, length(negNames1) + i);
+        names(posSize + length(negNames1) + i,:) = {negNames(length(negNames1)+i).name};
+        waitbar((posSize+length(negNames2)+i)/(posSize+negSize));
+    end
+    decaf_fv = testCaf;
+    save('test.mat','decaf_fv');
+end
+
 % randomly rearrange images so that all the positive images are not contained within one fold
 orderedArray = horzcat(indices,x', y);
 shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
@@ -219,21 +219,21 @@ toc
 % tuning parameter(s).
 disp('Performing cross validation...');
 tic
-[ev, param] = cross_validate(X, Y, ks, no_of_folds, classifier);
+[ev, param] = cross_validate(X, Y, ks, no_of_folds, classifier, h);
 toc
 if (strcmp(classifier,'KNN'))
-	[minev, minind] = min(ev);
-	cross_validation_parameter = ks(minind(1));
-	fprintf('Optimal k=%d\n', cross_validation_parameter);
+    [minev, minind] = min(ev);
+    cross_validation_parameter = ks(minind(1));
+    fprintf('Optimal k=%d\n', cross_validation_parameter);
     k = cross_validation_parameter;
-	save(training_param, 'k');
+    save(training_param, 'k');
 else
-	[maxev, maxind] = max(ev);
-	cross_validation_parameter = Call(maxind(1));
-	fprintf('Optimal C=%d\n', cross_validation_parameter);
-	Wbest =param(maxind(1),:).W;
-	Bbest = param(maxind(1),:).B;
-	save(training_param, 'Wbest', 'Bbest');
+    [maxev, maxind] = max(ev);
+    cross_validation_parameter = Call(maxind(1));
+    fprintf('Optimal C=%d\n', cross_validation_parameter);
+    Wbest =param(maxind(1),:).W;
+    Bbest = param(maxind(1),:).B;
+    save(training_param, 'Wbest', 'Bbest');
 end
 fprintf('Done.\n');
 end

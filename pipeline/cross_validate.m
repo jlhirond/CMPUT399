@@ -1,6 +1,12 @@
-function [ev, param] = cross_validate(x,y,ks,n,classifier)
+function [ev, param] = cross_validate(x,y,ks,n,classifier,h)
 training_feat_file='training_features.mat';
 training_features=load(training_feat_file);
+if nargin<6
+    h = waitbar(0,'Performing cross validation...');
+end
+if nargin<5
+    classifier = 'SVM';
+end
 if nargin<4
     n=training_features.no_of_folds;
 end
@@ -13,17 +19,19 @@ end
 if nargin<1
     x=training_features.X;
 end
-h=waitbar(0,'Performing cross validation');
 training_size=size(x, 2);
 fold_size=ceil(training_size/n);
 evall=zeros(n, numel(ks));
 %for SVM
 Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
+
 if (strcmp(classifier,'KNN'))
     loops = numel(ks);
 else
     loops = length(Call);
 end
+total = loops * n;
+
 for k_id=1:loops
     k=ks(k_id);
     
@@ -56,19 +64,16 @@ for k_id=1:loops
             paramW(i,:) = w;
             paramB(i,:) = b;
         end
+        progress = n*k_id + i - n;
+        waitbar(progress/total,h,'Performing cross validation...');
     end
     fprintf('\tDone with k=%d\n', k);
     if (strcmp(classifier,'SVM'))
         param(k_id,:).W = mean(paramW,1);
         param(k_id,:).B = mean(paramB,1);
-        %mParamW(k_id,:) = mean(paramW,1);
-        %mParamB(k_id,:) = mean(paramB,1);
     else
         param(k_id,:).K = mean(paramK,1);
     end
-    waitbar(k_id/loops);
-    %fprintf('\n\tNumber of positive images: %d\n', positiveCount);
 end
 ev = mean(evall,1);
-delete(h);
 end
