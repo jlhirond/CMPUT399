@@ -1,4 +1,4 @@
-function [ev, mParamW, mParamB] = cross_validate(x,y,ks,n,SVM)
+function [ev, param] = cross_validate(x,y,ks,n,classifier)
 training_feat_file='training_features.mat';
 training_features=load(training_feat_file);
 if nargin<4
@@ -12,21 +12,22 @@ if nargin<2
 end
 if nargin<1
     x=training_features.X;
-end     
-
+end
+h=waitbar(0,'Performing cross validation');
 training_size=size(x, 2);
 fold_size=ceil(training_size/n);
 evall=zeros(n, numel(ks));
 %for SVM
 Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
-if SVM == 0
-    loops = nume1(ks);
+if (strcmp(classifier,'KNN'))
+    loops = numel(ks);
 else
-    loops = 9; % yup
+    loops = length(Call);
 end
 for k_id=1:loops
     k=ks(k_id);
-    for i = 1:n
+    
+    for i = 1:n 
         fold_start_idx=(i-1)*fold_size + 1;
         if i ~= n
             fold_end_idx=i*fold_size;
@@ -42,10 +43,11 @@ for k_id=1:loops
         yi_=y(other_folds_idx);
         % this can be svm, sift, etc.
         %yip = PredictBear(xi_, yi_, xi, k);
-        if SVM == 0
+        if (strcmp(classifier, 'KNN'))
             yip = PredictPeopleCount(xi_(2:end,:), yi_, xi(2:end,:), k, 'mean');
             ei=mean(abs(yi-yip));
             evall(i, k_id)=ei;
+            paramK(i,:)=k;
         else
             %do SVM
             C = Call(k_id);
@@ -56,9 +58,17 @@ for k_id=1:loops
         end
     end
     fprintf('\tDone with k=%d\n', k);
-    mParamW(k_id,:) = mean(paramW,1);
-    mParamB(k_id,:) = mean(paramB,1);
+    if (strcmp(classifier,'SVM'))
+        param(k_id,:).W = mean(paramW,1);
+        param(k_id,:).B = mean(paramB,1);
+        %mParamW(k_id,:) = mean(paramW,1);
+        %mParamB(k_id,:) = mean(paramB,1);
+    else
+        param(k_id,:).K = mean(paramK,1);
+    end
+    waitbar(k_id/loops);
     %fprintf('\n\tNumber of positive images: %d\n', positiveCount);
 end
 ev = mean(evall,1);
+delete(h);
 end
