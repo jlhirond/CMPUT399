@@ -23,7 +23,7 @@ training_size=size(x, 2);
 fold_size=ceil(training_size/n);
 evall=zeros(n, numel(ks));
 %for SVM
-Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
+Call=[.001 .0001 .00001];
 
 if (strcmp(classifier,'KNN'))
     loops = numel(ks);

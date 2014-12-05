@@ -1,5 +1,5 @@
 function trainingPipe(classifier, feature)
-vlfeat_dir='vlfeat-0.9.19';
+vlfeat_dir='C:/Users/Valerie/Documents/MATLAB/vlfeat-0.9.19';
 run(strcat(vlfeat_dir, '/toolbox/vl_setup'));
 addpath(genpath('cvml2013-practical-face-detection'));
 h=waitbar(0,'Extracting localization features from positive images...');
@@ -97,8 +97,8 @@ for i=1:croppedPosCount;
 end
 
 % get cropped neg images
-croppedNegatives = cell(576, negSize);
-
+%croppedNegatives = cell(576, negSize);
+croppedNegatives = cell(1, negSize);
 waitbar(0,h,'Extracting localization features from negative images...');
 for i=1:negSize
     rand_loc = randperm(croppedPosCount,1);
@@ -145,6 +145,7 @@ croppedNegFeatures = croppedNegFeatures';
 
 % save the results
 save('localization_features.mat', 'croppedPosFeatures', 'croppedNegFeatures');
+save('cropped_images.mat', 'cropped', 'croppedNegatives');
 toc
 % read all the images
 disp('Loading names and counts of training images...');
