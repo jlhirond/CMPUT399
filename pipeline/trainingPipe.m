@@ -1,7 +1,7 @@
 function trainingPipe(classifier, feature)
-vlfeat_dir='C:/Users/Valerie/Documents/MATLAB/vlfeat-0.9.19';
+vlfeat_dir='vlfeat-0.9.19';
 run(strcat(vlfeat_dir, '/toolbox/vl_setup'));
-addpath(genpath('cvml2013-practical-face-detection'));
+%addpath(genpath('cvml2013-practical-face-detection'));
 h=waitbar(0,'Extracting localization features from positive images...');
 waitObject = onCleanup(@() delete(h));
 
@@ -126,25 +126,55 @@ for i=1:negSize
     waitbar(i/negSize);
 end
 
+% for i=1:negSize
+%     rand_xloc = uint32((2024-1).*rand(1) + 1);
+%     rand_yloc = uint32((1512-1).*rand(1) + 1);
+%       
+%     % Read from the correct folder
+%     if i > length(negNames2)
+%         dir_name = 'NegativeImages1';
+%     else
+%         dir_name = 'NegativeImages2';
+%     end
+%     
+%     imNeg = imread(strcat(dir_name, '/', negNames(i).name));
+%     croppedNeg = imNeg(rand_yloc:rand_yloc+23,rand_xloc:rand_xloc+23);
+%     % convert to grayscale
+%     %croppedNeg = rgb2gray(croppedNeg);
+%     % resize to 24x24
+%     % convert to single
+%     croppedNeg = im2single(croppedNeg);
+%     % add to cropped cell array   
+%     croppedNegatives{i} = croppedNeg;
+%     waitbar(i/negSize);
+% end
+
 % Create an array of images
 for i=1:croppedPosCount
     % compute vl_hog features for each positive image and place in feature matrix
     feat = vl_hog(cropped{i}, 24);
+    lbpFeat = vl_lbp(cropped{i},24);
     PosFeat{i} = feat(:);
+    lbpPosFeat{i} = lbpFeat(:);
 end
 for k=1:negSize
     % compute vl_hog features for each negative image and place in feature matrix
     feat = vl_hog(croppedNegatives{k}, 24);
+    lbpFeat = vl_lbp(cropped{i}, 24);
     NegFeat{k} = feat(:);
+    lbpNegFeat{k} = lbpFeat(:);
 end
 croppedPosFeatures = (cell2mat(PosFeat));
 croppedNegFeatures = (cell2mat(NegFeat));
+
+croppedLbpPosFeatures = (cell2mat(lbpPosFeat));
+croppedLbpNegFeatures = (cell2mat(lbpNegFeat));
 
 croppedPosFeatures = croppedPosFeatures';
 croppedNegFeatures = croppedNegFeatures';
 
 % save the results
-save('localization_features.mat', 'croppedPosFeatures', 'croppedNegFeatures');
+save('localization_features.mat', 'croppedPosFeatures', 'croppedNegFeatures', 'croppedLbpPosFeatures', 'croppedLbpNegFeatures');
 save('cropped_images.mat', 'cropped', 'croppedNegatives');
 toc
 % read all the images

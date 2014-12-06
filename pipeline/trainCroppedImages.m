@@ -10,8 +10,11 @@ load('cropped_images.mat', 'croppedNegatives');
 Ypos = ones(size(croppedPosFeatures,1),1);
 Yneg = -ones(size(croppedNegFeatures,1),1);
 
+croppedLbpNegFeatures = croppedLbpNegFeatures';
+croppedLbpPosFeatures = croppedLbpPosFeatures';
 croppedFeatures = [croppedPosFeatures; croppedNegFeatures];
-
+croppedLbpFeatures = [croppedLbpPosFeatures; croppedLbpNegFeatures];
+croppedFeatures = [croppedFeatures croppedLbpFeatures];
 for i =1:length(cropped)
     img = double(cropped{:,i});
     croppedPosImages(:,:,i) = img;
@@ -40,37 +43,44 @@ Xneg=transpose(reshape(normNegImages,ysz*xsz,nneg));
 % 
 croppedImages = [Xpos; Xneg];
 
-% Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
-% indices = (1:size(croppedImages))';
-% croppedY = [Ypos; Yneg];
-% orderedArray = horzcat(indices,croppedImages, croppedY);
-% shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
-% croppedImages = shuffledArray(:,1:end-1)'; 
-% croppedY = shuffledArray(:,end);
-% [ev, param] = cross_validate(croppedImages,croppedY,ks,n,classifier);
-% if (strcmp(classifier,'SVM'))
-%     [maxev, maxind] = max(ev);
-%     cross_validation_parameter = Call(maxind(1));
-%     fprintf('Optimal C=%d\n', cross_validation_parameter);
-%     WRbest =param(maxind(1),:).W;
-%     BRbest = param(maxind(1),:).B;
-% end
-% save('cropped_images_train.mat', 'WRbest', 'BRbest');
-Call=[.001 .0001 .00001];
+Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
+indices = (1:size(croppedImages))';
+croppedY = [Ypos; Yneg];
+orderedArray = horzcat(indices,croppedImages, croppedY);
+shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
+croppedImages = shuffledArray(:,1:end-1)'; 
+croppedY = shuffledArray(:,end);
+[ev, param] = cross_validate(croppedImages,croppedY,ks,n,classifier);
+if (strcmp(classifier,'SVM'))
+    [maxev, maxind] = max(ev);
+    cross_validation_parameter = Call(maxind(1));
+    fprintf('Optimal C=%d\n', cross_validation_parameter);
+    WRbest =param(maxind(1),:).W;
+    BRbest = param(maxind(1),:).B;
+end
+save('cropped_images_train.mat', 'WRbest', 'BRbest');
+Call=[1000 100 10 1 .1 .01 .001 .0001 .00001];
 indices = (1:size(croppedFeatures))';
 croppedY = [Ypos; Yneg];
 orderedArray = horzcat(indices,croppedFeatures, croppedY);
 shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
 croppedFeatures = shuffledArray(:,1:end-1)'; 
 croppedY = shuffledArray(:,end);
-[ev, param] = cross_validate(croppedFeatures,croppedY,ks,n,classifier);
+[ev, param] = cross_validate(croppedFeatures(1:31,:),croppedY,ks,n,classifier);
+[lbpEv, lbpParam] = cross_validate(croppedFeatures(31:end,:),croppedY,ks,n,classifier);
 if (strcmp(classifier,'SVM'))
     [maxev, maxind] = max(ev);
+    [maxLBPev, maxLBPind] = max(lbpEv);
     cross_validation_parameter = Call(maxind(1));
+    cross_validation_lbp = Call(maxLBPind(1));
     fprintf('Optimal C=%d\n', cross_validation_parameter);
+    fprintf('Optimal lbp c=%d\n', cross_validation_lbp);
     Wbest =param(maxind(1),:).W;
     Bbest = param(maxind(1),:).B;
+    Wlbp = lbpParam(maxLBPind(1),:).W;
+    Blbp = lbpParam(maxLBPind(1),:).B;
 end
-save('cropped_features_train.mat', 'Wbest', 'Bbest');
+save('cropped_features_train.mat', 'Wbest', 'Bbest','Wlbp','Blbp');
+save('cropped_lbp_train.mat','Wlbp','Blbp');
 end
 
