@@ -66,8 +66,8 @@ orderedArray = horzcat(indices,croppedFeatures, croppedY);
 shuffledArray = orderedArray(randperm(size(orderedArray,1)),:);
 croppedFeatures = shuffledArray(:,1:end-1)'; 
 croppedY = shuffledArray(:,end);
-[ev, param] = cross_validate(croppedFeatures(1:31,:),croppedY,ks,n,classifier);
-[lbpEv, lbpParam] = cross_validate(croppedFeatures(31:end,:),croppedY,ks,n,classifier);
+[ev, param] = cross_validate(croppedFeatures(1:32,:),croppedY,ks,n,classifier);
+[lbpEv, lbpParam] = cross_validate(croppedFeatures(32:end,:),croppedY,ks,n,classifier);
 if (strcmp(classifier,'SVM'))
     [maxev, maxind] = max(ev);
     [maxLBPev, maxLBPind] = max(lbpEv);
